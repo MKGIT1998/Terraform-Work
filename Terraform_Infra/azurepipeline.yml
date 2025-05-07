@@ -1,0 +1,79 @@
+trigger:
+- main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+- group: TerraformBackendConfig  # Link the variable group
+
+stages:
+- stage: Build
+  displayName: 'Build Stage'
+  jobs:
+  - job: BuildJob
+    displayName: 'Terraform Setup & Validation'
+    steps:
+    - task: UseTerraform@0
+      displayName: 'Install Terraform'
+      inputs:
+        terraformVersion: '1.5.0'
+
+    - task: TerraformCLI@2
+      displayName: 'Terraform Init'
+      inputs:
+        provider: 'azurerm'
+        command: 'init'
+        environmentServiceName: $(environmentServiceName)
+        backendAzureRmResourceGroupName: $(backendResourceGroup)
+        backendAzureRmStorageAccountName: $(backendStorageAccount)
+        backendAzureRmContainerName: $(backendContainerName)
+        backendAzureRmKey: $(backendKey)
+        allowTelemetryCollection: true
+
+    - task: TerraformCLI@2
+      displayName: 'Terraform Validate'
+      inputs:
+        provider: 'azurerm'
+        command: 'validate'
+        allowTelemetryCollection: true
+
+
+- stage: Deploy
+  displayName: 'Deploy Stage'
+  dependsOn: Build
+  jobs:
+  - job: DeployJob
+    displayName: 'Terraform Plan & Apply'
+    steps:
+    - task: UseTerraform@0
+      displayName: 'Install Terraform'
+      inputs:
+        terraformVersion: '1.5.0'
+
+    - task: TerraformCLI@2
+      displayName: 'Terraform Init'
+      inputs:
+        provider: 'azurerm'
+        command: 'init'
+        environmentServiceName: $(environmentServiceName)
+        backendAzureRmResourceGroupName: $(backendResourceGroup)
+        backendAzureRmStorageAccountName: $(backendStorageAccount)
+        backendAzureRmContainerName: $(backendContainerName)
+        backendAzureRmKey: $(backendKey)
+        allowTelemetryCollection: true
+
+    - task: TerraformCLI@2
+      displayName: 'Terraform Plan'
+      inputs:
+        provider: 'azurerm'
+        command: 'plan'
+        allowTelemetryCollection: true
+
+    - task: TerraformCLI@2
+      displayName: 'Terraform Apply'
+      inputs:
+        provider: 'azurerm'
+        command: 'apply'
+        workingDirectory: '$(System.DefaultWorkingDirectory)/Terraform_Infra/env/dev'
+        allowTelemetryCollection: true
