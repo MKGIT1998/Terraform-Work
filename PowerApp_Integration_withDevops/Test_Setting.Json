@@ -1,0 +1,21 @@
+{
+    "EnvironmentVariables": {
+
+    },
+    "ConnectionReferences": {
+      "Dataverse": {
+        "ConnectionId": "/providers/Microsoft.PowerApps/apis/shared_commondataservice/connectionIds/DataverseConnection",
+        "EnvironmentUrl": "https://abc.crm.dynamics.com"
+      },
+      "SharePoint": {
+        "ConnectionId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline/connectionIds/SPConnection",
+        "SiteUrl": "https://yourtenant.sharepoint.com/sites/YourSite"
+      },
+      "AzureBlobStorage": {
+        "ConnectionId": "/providers/Microsoft.PowerApps/apis/shared_azureblob/connectionIds/BlobStorageConnection",
+        "StorageAccountName": "yourstorageaccount",
+        "ContainerName": "yourcontainer"
+      }
+    }
+
+  }

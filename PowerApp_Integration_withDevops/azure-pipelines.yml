@@ -1,0 +1,117 @@
+trigger:
+- none  # You can modify this trigger based on your needs, for example, for branches like 'dev', 'release', etc.
+ 
+variables:
+  environmentUrl: 'abc.crm.dynamics.com' 
+  solutionName: 'Dataverse'
+  TEST_ENV_URL:  'def.crm.dynamics.com'
+  packageOutputDirectory: '$(Build.ArtifactStagingDirectory)/DeploymentPackage'
+  solutionExportPathunmanged: '$(Build.ArtifactStagingDirectory)/labIntelSolution_UNMANAGED.zip'
+  solutionExportPathmanaged: '$(Build.ArtifactStagingDirectory)/labIntelSolution_MANAGED.zip'
+stages:
+  -  stage: BuildUnmanaged 
+     jobs:
+       -  job: ExportSolutionUnmanged
+          displayName: 'Export Solution unmanged'
+          pool:
+            vmImage: 'windows-latest'  # Using Windows agent for Power Platform CLI tools
+        
+          steps:
+          - task: PowerPlatformToolInstaller@2
+            inputs:
+              DefaultVersion: true
+
+          - task: PowerPlatformExportSolution@2
+            inputs:
+              authenticationType: 'PowerPlatformSPN'
+              PowerPlatformSPN: 'PowerApps-lab-DEV'
+              SolutionName: '$(solutionName)'
+              SolutionOutputFile: '$(solutionExportPathunmanged)'
+              AsyncOperation: true
+              MaxAsyncWaitTime: '60'
+          - task: PublishBuildArtifacts@1
+            inputs:
+              PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+              ArtifactName: 'drop'
+              publishLocation: 'Container'
+
+          - task: PowerPlatformUnpackSolution@2
+            inputs:
+              SolutionInputFile: '$(solutionExportPathunmanged)'
+              SolutionTargetFolder: '$(Build.SourcesDirectory)\labIntelSolution\Unmanaged'
+          
+          - script: |
+              echo commit all changes 
+              git config user.email "mehelaka.khan-1@corteva.com" 
+              git config user.name "Automatic Build"  
+              git init 
+              git checkout -b PowerApp_Deploy
+              git add . 
+              git commit -m "Updated Power App solution" 
+              git -c http.extraheader="AUTHORIZATION: bearer $(System.AccessToken)" push --set-upstream origin PowerApp_Deploy
+            displayName: 'Commit and Push Changes'
+  -  stage: BuildManaged
+     jobs:
+       -  job: ExportSolutionmanaged
+          displayName: 'Export Solution managed'
+          pool:
+            vmImage: 'windows-latest'  # Using Windows agent for Power Platform CLI tools
+ 
+          steps:
+          - task: PowerPlatformToolInstaller@2
+            inputs:
+              DefaultVersion: true
+
+          - task: PowerPlatformExportSolution@2
+            inputs:
+              authenticationType: 'PowerPlatformSPN'
+              PowerPlatformSPN: 'PowerApps-lab-DEV'
+              SolutionName: '$(solutionName)'
+              SolutionOutputFile: '$(solutionExportPathmanaged)'
+              Managed: true
+              AsyncOperation: true
+              MaxAsyncWaitTime: '60'
+
+          - task: PublishBuildArtifacts@1
+            inputs:
+              PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+              ArtifactName: 'drop'
+              publishLocation: 'Container'
+              
+  -  stage: DeployTest
+     jobs:
+       -  job: DeployToTest 
+          displayName: 'Deploy Solution Package '
+          pool:
+            vmImage: 'windows-latest'  # Using Windows agent for Power Platform CLI tools
+ 
+          steps:
+
+          - task: PowerPlatformToolInstaller@2
+            inputs:
+              DefaultVersion: true
+          - task: DownloadBuildArtifacts@1
+            inputs:
+              buildType: 'current'
+              downloadType: 'specific'
+              downloadPath: '$(Build.ArtifactStagingDirectory)'
+          - task: PowerPlatformImportSolution@2
+            inputs:
+              authenticationType: 'PowerPlatformSPN'
+              PowerPlatformSPN: 'PowerApps-lab-TEST'
+              SolutionInputFile: '$(Build.ArtifactStagingDirectory)/drop/labIntelSolution_UNMANAGED.zip'
+              UseDeploymentSettingsFile: true
+              DeploymentSettingsFile: '$(Build.SourcesDirectory)/TEST_Setting.Json'
+              AsyncOperation: true
+              MaxAsyncWaitTime: '720'
+              StageAndUpgrade: true
+              PublishWorkflows: true
+            retryCountOnTaskFailure: 3
+
+              
+
+          # - task: PowerPlatformDeleteSolution@2
+          #   inputs:
+          #     authenticationType: 'PowerPlatformSPN'
+          #     PowerPlatformSPN: 'PowerApps-lab-TEST'
+          #     SolutionName: 'DatabricksPOC'
