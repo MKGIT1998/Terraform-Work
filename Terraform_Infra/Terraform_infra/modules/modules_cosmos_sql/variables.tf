@@ -1,0 +1,6 @@
+variable "sqldb" {
+  
+}
+variable "sqlcontainer" {
+  
+}

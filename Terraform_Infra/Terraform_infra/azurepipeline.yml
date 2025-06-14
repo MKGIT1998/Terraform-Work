@@ -1,0 +1,77 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+trigger:
+- none
+
+variables:
+- group: Terraform_Infra
+
+pool:
+  vmImage: ubuntu-latest
+
+stages:
+  - stage: Build
+    jobs:
+      - job: TerraformInstall
+        steps:
+        - task: TerraformInstaller@2
+          displayName: Install
+          inputs:
+            terraformVersion: 'latest'
+
+        - task: TerraformCLI@2
+          displayName: TerraformInit
+          inputs:
+            command: 'init'
+            backendType: 'azurerm'
+            backendServiceArm: $(backendServiceArm)
+            backendAzureRmResourceGroupName: $(backendAzureRmResourceGroupName)
+            backendAzureRmStorageAccountName: $(backendAzureRmStorageAccountName)
+            backendAzureRmContainerName: $(backendAzureRmContainerName)
+            allowTelemetryCollection: true
+        
+        - task: TerraformCLI@2
+          displayName: TerraformValidate
+          inputs:
+            command: 'validate'
+            allowTelemetryCollection: true
+
+  - stage: Deployment
+    jobs:
+      - job: Deploy
+        steps:
+        - task: TerraformInstaller@2
+          displayName: TerraformInstall
+          inputs:
+            terraformVersion: 'latest'
+
+        - task: TerraformCLI@2
+          displayName: TerraformInit
+          inputs:
+            command: 'init'
+            workingDirectory: '$(System.DefaultWorkingDirectory)/Terraform_infra/env/dev'
+            backendType: 'azurerm'
+            backendServiceArm: $(backendServiceArm)
+            backendAzureRmResourceGroupName: $(backendAzureRmResourceGroupName)
+            backendAzureRmStorageAccountName: $(backendAzureRmStorageAccountName)
+            backendAzureRmContainerName: $(backendAzureRmContainerName)
+            allowTelemetryCollection: true
+                                  
+
+        - task: TerraformCLI@2
+          inputs:
+            command: 'plan'
+            environmentServiceName: $(environmentServiceName)
+            allowTelemetryCollection: true
+            workingDirectory: '$(System.DefaultWorkingDirectory)/Terraform_infra/env/dev'
+
+        # - task: TerraformCLI@2
+        #   inputs:
+        #     command: 'apply'
+        #     environmentServiceName: 'SC-Terraform'
+        #     allowTelemetryCollection: true
+        #     workingDirectory: '$(System.DefaultWorkingDirectory)/Terraform_infra/env/dev'
+

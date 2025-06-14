@@ -1,0 +1,3 @@
+variable "new_collection" {
+  
+}

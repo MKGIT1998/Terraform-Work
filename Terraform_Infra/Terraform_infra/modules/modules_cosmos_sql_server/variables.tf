@@ -1,0 +1,5 @@
+variable "cosmosdb" {
+}
+variable "location" {
+  
+}
